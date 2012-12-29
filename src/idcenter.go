@@ -6,14 +6,11 @@ import (
 	"time"
 	"lib/logging"
 	"reflect"
+	"lib/error"
 )
-
-type ProviderType int
 
 const(
 	_ = iota
-	CACHE_PROVIDER_TYPE ProviderType
-	STORAGE_PROVIDER_TYPE ProviderType
 	DEFAULT_START = 1
 	DEFAULT_STEP = 1000
 )
@@ -34,17 +31,20 @@ type IdRange struct {
 
 type Provider interface {
 	Name() string
+	Initialize() error
 }
 
 type CacheProvider interface {
 	Name() string
-	BuildList(begin uint64, end uint64) error
-	Pop() (uint64, error)
+	Initialize() error
+	BuildList(group string, begin uint64, end uint64) error
+	Pop() (group string, uint64, error)
 }
 
 type StorageProvider interface {
 	Name() string
-	Initialize(group string, start uint64, step uint32) error
+	Initialize() error
+	BuildInfo(group string, start uint64, step uint32) error
 	Get(group string) (GroupInfo, error)
 	Propel(group string) (IdRange, error)
 }
@@ -55,34 +55,34 @@ var storageProviderMap map[string]StorageProvider = map[string]StorageProvider{}
 
 func RegisterCacheProvider(provider Provider) error {
 	if provider == nil {
-		panicMsg := "IdCenter: The provider is nil!"
-		logging.LogFatalln(panicMsg)
+		panicMsg := "IdCenter: The provider is nil!\n"
+		logging.LogFatal(panicMsg)
 		panic(panicMsg)
 	}
 	name := provider.Name()
 	if name == nil {
 		panicMsg := "IdCenter: The name of provider is nil!\n"
-		logging.LogFatalln(panicMsg)
+		logging.LogFatal(panicMsg)
 		panic(panicMsg)
 	}
 	switch provider.(type) {
 	case CacheProvider:
 		if _, contains := cacheProviderMap[name]; contains {
 			errorMsg := fmt.Sprintf("IdCenter: Repetitive cache provider name '%s'!\n" , name)
-			logging.LogErrorln(errorMsg)
+			logging.LogError(errorMsg)
 			return errors.New(errorMsg)
 		}
 		cacheProviderMap[name] = provider
 	case StorageProvider:
 		if _, contains := storageProviderMap[name]; contains {
 			errorMsg := fmt.Sprintf("IdCenter: Repetitive storage provider name '%s'!\n", name)
-			logging.LogErrorln(errorMsg)
+			logging.LogError(errorMsg)
 			return errors.New(errorMsg)
 		}
 		storageProviderMap[name] = provider
 	default:
 		panicMsg := fmt.Sprintf("IdCenter: Unexpected Provider type '%v'! (name=%s)\n", reflect.TypeOf(provider), name)
-		logging.LogFatalln(panicMsg)
+		logging.LogFatal(panicMsg)
 		panic(panicMsg)
 	}
 	return nil
@@ -95,7 +95,7 @@ type IdCenterManager struct {
 	Step uint32
 }
 
-func (self IdCenterManager) getId(group string) uint64 {
+func (self *IdCenterManager) getId(group string) (uint64, error) {
 	cacheProvider, contains := cacheProviderMap[self.CacheProviderName]
 	if !contains {
 		panicMsg := fmt.Sprintf("IdCenter: The cache Provider named '%s' is NOTEXISTENT!\n", self.CacheProviderName)
@@ -106,21 +106,27 @@ func (self IdCenterManager) getId(group string) uint64 {
 		panicMsg := fmt.Sprintf("IdCenter: The storage Provider named '%s' is NOTEXISTENT!\n", self.StorageProviderName)
 		panic(panicMsg)
 	}
-	id, err := cacheProvider.Pop()
+	id, err := cacheProvider.Pop(group)
 	if err != nil {
-		errorMsg := fmt.Sprintf("Occur error when pop id for group '%s': %s", group, err.Error())
-		logging.LogErrorln(errorMsg)
-		return err
+		switch err.(type) {
+		case error.EmptyListError:
+			warningMsg := fmt.Sprintf("Warning: The list of group '%s' is empty.", group)
+			logging.LogWarn(warningMsg)
+		default:
+			errorMsg := fmt.Sprintf("Occur error when pop id for group '%s': %s\n", group, err.Error())
+			logging.LogError(errorMsg)
+			return -1, err
+		}
 	}
 	if id != nil && id > 0 {
-		return id
+		return id, nil
 	}
-	logging.LogInfof("Prepare check & build id list for group '%s'...", group)
+	logging.LogInfof("Prepare check & build id list for group '%s'...\n", group)
 	groupInfo, err := storageProvider.Get(group)
 	if err != nil {
-		errorMsg := fmt.Sprintf("Occur error when get group (name='%s') info : %s", group, err.Error())
-		logging.LogErrorln(errorMsg)
-		return err
+		errorMsg := fmt.Sprintf("Occur error when get group (name='%s') info : %s\n", group, err.Error())
+		logging.LogError(errorMsg)
+		return -1, err
 	}
 	if groupInfo == nil {
 		currentStart := self.Start
@@ -135,29 +141,35 @@ func (self IdCenterManager) getId(group string) uint64 {
 		if err != nil {
 			errorMsg := fmt.Sprintf("Occur error when initialize group '%s': %s", group, err.Error())
 			logging.LogErrorln(errorMsg)
-			return err
+			return -1, err
 		}
 	}
 	idRange, err := storageProvider.Propel(group)
 	if err != nil {
-		errorMsg := fmt.Sprintf("Occur error when propel id for group '%s': %s", group, err.Error())
-		logging.LogErrorln(errorMsg)
-		return err
+		errorMsg := fmt.Sprintf("Occur error when propel id for group '%s': %s\n", group, err.Error())
+		logging.LogError(errorMsg)
+		return -1, err
 	}
 	currentBegin := idRange.Begin
 	currentEnd := idRange.End
-	cacheProvider.BuildList(currentBegin, currentEnd)
+	cacheProvider.BuildList(group, currentBegin, currentEnd)
 	if err != nil {
-		errorMsg := fmt.Sprintf("Occur error when build id list for group '%s': %s", group, err.Error())
-		logging.LogErrorln(errorMsg)
-		return err
+		errorMsg := fmt.Sprintf("Occur error when build id list for group '%s': %s\n", group, err.Error())
+		logging.LogError(errorMsg)
+		return -1, err
 	}
-	id, err = cacheProvider.Pop()
+	id, err = cacheProvider.Pop(group)
 	if err != nil {
-		errorMsg := fmt.Sprintf("Occur error when pop id for group '%s': %s", group, err.Error())
-		logging.LogErrorln(errorMsg)
-		return err
+		switch err.(type) {
+		case error.EmptyListError:
+			warningMsg := fmt.Sprintf("Warning: The list of group '%s' is empty.", group)
+			logging.LogWarn(warningMsg)
+		default:
+			errorMsg := fmt.Sprintf("Occur error when pop id for group '%s': %s\n", group, err.Error())
+			logging.LogError(errorMsg)
+			return -1, err
+		}
 	}
-	return id
+	return id, nil
 }
 
