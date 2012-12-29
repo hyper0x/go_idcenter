@@ -1,18 +1,16 @@
-package config
+package lib
 
 import (
-	"os"
 	"bufio"
-	"strings"
-	"io"
-	"fmt"
 	"bytes"
-	"lib"
-	"lib/logging"
+	"fmt"
+	"io"
+	"os"
+	"strings"
 )
 
 type Config struct {
-    Dict map[string]string
+	Dict map[string]string
 }
 
 var myConfig Config
@@ -21,7 +19,8 @@ var loadingChan = make(chan int)
 
 func init() {
 	go func() {
-		L: for {
+	L:
+		for {
 			select {
 			case incr, ready := <-loadingChan:
 				if !ready {
@@ -40,14 +39,8 @@ func ReadConfig(fresh bool) (Config, error) {
 	}
 
 	myConfig = *new(Config)
-	myConfig.ServerPort = 9000
 	currentDir, err := os.Getwd()
-	if err != nil {
-		logging.LogErrorln("GetwdError:", err)
-	} else {
-		myConfig.WorkDir = currentDir
-	}
-	configFilePath := currentDir + "/" + lib.CONFIG_FILE_NAME
+	configFilePath := currentDir + "/" + CONFIG_FILE_NAME
 	myConfig.Dict = make(map[string]string)
 	configFile, err := os.OpenFile(configFilePath, os.O_RDONLY, 0666)
 	if err != nil {
@@ -60,7 +53,7 @@ func ReadConfig(fresh bool) (Config, error) {
 			warningBuffer.WriteString("Use DEFAULT config '")
 			warningBuffer.WriteString(fmt.Sprintf("%v", myConfig))
 			warningBuffer.WriteString("'. ")
-			logging.LogWarnln(warningBuffer.String())
+			LogWarnln(warningBuffer.String())
 			return myConfig, nil
 		default:
 			return myConfig, err
@@ -83,15 +76,14 @@ func ReadConfig(fresh bool) (Config, error) {
 			continue
 		}
 		sepIndex := strings.Index(str, "=")
-		if sepIndex <= 0 || sepIndex == (len(str) - 1) {
+		if sepIndex <= 0 || sepIndex == (len(str)-1) {
 			continue
 		}
 		key := strings.ToLower(str[0:sepIndex])
-		value := str[sepIndex + 1:len(str)]
+		value := str[sepIndex+1 : len(str)]
 		myConfig.Dict[key] = value
 	}
 	loadingChan <- 1
-    logging.LogInfof("Loaded config file (count=%d): %v\n", loadingCount, myConfig)
+	LogInfof("Loaded config file (count=%d): %v\n", loadingCount, myConfig)
 	return myConfig, nil
 }
-
