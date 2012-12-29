@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 	"lib/logging"
+	"reflect"
 )
 
 type ProviderType int
@@ -52,7 +53,7 @@ var cacheProviderMap map[string]CacheProvider = map[string]CacheProvider{};
 
 var storageProviderMap map[string]StorageProvider = map[string]StorageProvider{};
 
-func RegisterCacheProvider(providerType ProviderType, provider Provider) error {
+func RegisterCacheProvider(provider Provider) error {
 	if provider == nil {
 		panicMsg := "IdCenter: The provider is nil!"
 		logging.LogFatalln(panicMsg)
@@ -64,32 +65,23 @@ func RegisterCacheProvider(providerType ProviderType, provider Provider) error {
 		logging.LogFatalln(panicMsg)
 		panic(panicMsg)
 	}
-	if providerType == nil {
-		panicMsg := fmt.Sprintf("IdCenter: The type of provider is nil! (name=%s)\n", name)
-		logging.LogFatalln(panicMsg)
-		panic(panicMsg)
-	}
-	var providerTypeName string
-	switch providerType {
-	case CACHE_PROVIDER_TYPE:
-		providerTypeName = "cache"
+	switch provider.(type) {
+	case CacheProvider:
 		if _, contains := cacheProviderMap[name]; contains {
-			errorMsg := fmt.Sprintf("IdCenter: Repetitive %s provider name '%s'!\n", providerTypeName, name)
+			errorMsg := fmt.Sprintf("IdCenter: Repetitive cache provider name '%s'!\n" , name)
 			logging.LogErrorln(errorMsg)
 			return errors.New(errorMsg)
 		}
 		cacheProviderMap[name] = provider
-	case STORAGE_PROVIDER_TYPE:
-		providerTypeName = "storage"
-		providerTypeName = "cache"
+	case StorageProvider:
 		if _, contains := storageProviderMap[name]; contains {
-			errorMsg := fmt.Sprintf("IdCenter: Repetitive %s provider name '%s'!\n", providerTypeName, name)
+			errorMsg := fmt.Sprintf("IdCenter: Repetitive storage provider name '%s'!\n", name)
 			logging.LogErrorln(errorMsg)
 			return errors.New(errorMsg)
 		}
 		storageProviderMap[name] = provider
 	default:
-		panicMsg := fmt.Sprintf("IdCenter: Unexpected Provider type '%d'! (name=%s)\n", providerType, name)
+		panicMsg := fmt.Sprintf("IdCenter: Unexpected Provider type '%v'! (name=%s)\n", reflect.TypeOf(provider), name)
 		logging.LogFatalln(panicMsg)
 		panic(panicMsg)
 	}
