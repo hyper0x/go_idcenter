@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/garyburd/redigo/redis"
 	"idcenter/lib"
-	"reflect"
 	"strconv"
 	"sync"
 	"time"
@@ -104,7 +103,6 @@ func (self *RedisCacheProvider) Pop(group string) (uint64, error) {
 		lib.LogError(errorMsg)
 		return 0, errors.New(errorMsg)
 	}
-	lib.LogInfoln("Value Type:", reflect.TypeOf(value))
 	if value == nil {
 		errorMsg := fmt.Sprintf("Empty List! (group=%s)", group)
 		return 0, &lib.EmptyListError{errorMsg}
