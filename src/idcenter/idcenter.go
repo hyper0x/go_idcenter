@@ -48,9 +48,9 @@ type StorageProvider interface {
 	Propel(group string) (*IdRange, error)
 }
 
-var cacheProviderMap map[string]CacheProvider = map[string]CacheProvider{}
+var cacheProviderMap = make(map[string]CacheProvider)
 
-var storageProviderMap map[string]StorageProvider = map[string]StorageProvider{}
+var storageProviderMap = make(map[string]StorageProvider)
 
 func RegisterCacheProvider(provider Provider) error {
 	if provider == nil {

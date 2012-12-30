@@ -35,7 +35,7 @@ func TestRedisCacheProvider(t *testing.T) {
 		t.FailNow()
 	}
 	switch err.(type) {
-	case lib.EmptyListError:
+	case *lib.EmptyListError:
 		t.Logf("Pop from a empty list of group '%s'.", group)
 	default:
 		t.Errorf("Pop Error: %s", err.Error())
