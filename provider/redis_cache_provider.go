@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/garyburd/redigo/redis"
-	"idcenter/lib"
+	"go-idcenter/lib"
 	"strconv"
 	"sync"
 	"time"
@@ -15,18 +15,19 @@ var cacheMutex *sync.RWMutex
 var redisPool *redis.Pool
 var iRedisCacheProvider *redisCacheProvider
 
-type RedisCacheParameter struct {
+type CacheParameter struct {
 	Name string
 	Ip string
 	Port int
 	Password string
+	PoolSize uint16
 }
 
 type redisCacheProvider struct {
 	ProviderName string
 }
 
-func New(parameter RedisCacheParameter) *redisCacheProvider {
+func New(parameter CacheParameter) *redisCacheProvider {
 	initContext.Do(func() {
 		err := initialize(parameter)
 		if err != nil {
@@ -36,11 +37,11 @@ func New(parameter RedisCacheParameter) *redisCacheProvider {
 	return iRedisCacheProvider
 }
 
-func initialize(parameter RedisCacheParameter) error {
+func initialize(parameter CacheParameter) error {
 	redisServerAddr := fmt.Sprintf("%v:%v", parameter.Ip, parameter.Port)
-	lib.LogInfof("Initialize redis cache provider (%v)...", parameter)
+	lib.LogInfof("Initialize redis cache provider (parameter=%v)...", parameter)
 	redisPool = &redis.Pool{
-		MaxIdle:     3,
+		MaxIdle:     uint16(parameter.PoolSize),
 		IdleTimeout: 240 * time.Second,
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", redisServerAddr)

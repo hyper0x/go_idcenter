@@ -3,7 +3,7 @@ package idcenter
 import (
 	"errors"
 	"fmt"
-	"idcenter/lib"
+	"go-idcenter/lib"
 	"reflect"
 	"time"
 )

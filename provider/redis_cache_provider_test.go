@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"idcenter/lib"
+	"go-idcenter/lib"
 	"testing"
 	"runtime/debug"
 )
@@ -13,10 +13,11 @@ func TestRedisCacheProvider(t *testing.T) {
 			lib.LogErrorf("Fatal Error: %s\n", err)
 		}
 	}()
-	parameter := RedisCacheParameter{
+	parameter := CacheParameter{
 		Name:            "Test Redis Cache Provider",
 		Ip:   "127.0.0.1",
 		Port: 6379,
+		PoolSize: uint16(3),
 	}
 	rcp := New(parameter)
 	group := "test"
