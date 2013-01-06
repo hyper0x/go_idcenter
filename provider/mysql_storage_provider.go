@@ -12,16 +12,10 @@ import (
 )
 
 var initContext sync.Once
-var cacheMutex *sync.RWMutex
-var iMysqlConnPool *mysqlConnPool
+var mysqlConnPool *Pool
 var iMysqlStorageProvider *mysqlStorageProvider
 
-type mysqlConnPool struct {
-	size uint16
-	pool chan *autorc.Conn
-}
-
-type MysqlStorageParameter struct {
+type StorageParameter struct {
 	Name string
 	Ip string
 	Port int
@@ -35,7 +29,7 @@ type mysqlStorageProvider struct {
 	ProviderName string
 }
 
-func New(parameter MysqlStorageParameter) *mysqlStorageProvider {
+func New(parameter StorageParameter) *mysqlStorageProvider {
 	initContext.Do(func() {
 		err := initialize(parameter)
 		if err != nil {
@@ -45,28 +39,27 @@ func New(parameter MysqlStorageParameter) *mysqlStorageProvider {
 	return iMysqlStorageProvider
 }
 
-func initialize(parameter MysqlStorageParameter) error {
-
-
-	mysqlPool = &redis.Pool{
-MaxIdle:     3,
-IdleTimeout: 240 * time.Second,
-	Dial: func() (redis.Conn, error) {
-		c, err := redis.Dial("tcp", redisServerAddr)
+func initialize(parameter StorageParameter) error {
+	mysqlServerAddr := fmt.Sprintf("%v:%v", parameter.Ip, parameter.Port)
+	lib.LogInfof("Initialize mysql storage provider (parameter=%v)...", parameter)
+	mysqlConnPool := &Pool{Id:"MySQL Connection Pool", Size:int(parameter, PoolSize)}
+	initFunc := func() (interface{}, error) {
+		conn := autorc.New("tcp", "", mysqlServerAddr, parameter.User, parameter.Password)
+		err := conn.Use(parameter.DbName))
 		if err != nil {
+			errorMsg := fmt.Sprintf("Occur error when mysql connection initialization (parameter=%v): %s\n", parameter, err)
+			lib.LogErrorln(errorMsg)
 			return nil, err
 		}
-		if len(parameter.Password) > 0 {
-			if _, err := c.Do("AUTH", parameter.Password); err != nil {
-				c.Close()
-				return nil, err
-			}
-		}
-		return c, err
-	},
-}
-cacheMutex = new(sync.RWMutex)
-iMysqlStorageProvider = &mysqlStorageProvider{parameter.Name}
-return nil
+		return conn, nil
+	}
+	err := mysqlConnPool.Init(initFunc)
+	if err != nil {
+		errorMsg := fmt.Sprintf("Occur error when mysql connection pool initialization (parameter=%v): %s\n", parameter, err)
+		lib.LogErrorln(errorMsg)
+		return errors.New(errorMsg)
+	}
+	iMysqlStorageProvider = &mysqlStorageProvider{parameter.Name}
+	return nil
 }
 

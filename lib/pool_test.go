@@ -17,7 +17,13 @@ func TestRedisCacheProviderSync(t *testing.T) {
 	}()
 	sign := make(chan bool, 2)
 	pool := &Pool{Id:"Test", Size:100}
-	pool.Init(initFunc)
+	err := pool.Init(initFunc)
+	if err != nil {
+		debug.PrintStack()
+		t.Errorf("Init Error (Test, sync): %s\n", err)
+		t.FailNow()
+		return
+	}
 	go gettingLoop(pool, sign, 0)
 	go puttingLoop(pool, sign, 0)
 	<- sign
@@ -33,7 +39,13 @@ func TestRedisCacheProviderAsync(t *testing.T) {
 	}()
 	sign := make(chan bool, 2)
 	pool := &Pool{Id:"Test", Size:100}
-	pool.Init(initFunc)
+	err := pool.Init(initFunc)
+	if err != nil {
+		debug.PrintStack()
+		t.Errorf("Init Error (Test, async): %s\n", err)
+		t.FailNow()
+		return
+	}
 	go gettingLoop(pool, sign, 100)
 	go puttingLoop(pool, sign, 100)
 	<- sign
@@ -49,7 +61,13 @@ func BenchmarkRedisCacheProviderSync(b *testing.B) {
 	}()
 	sign := make(chan bool, 2)
 	pool := &Pool{Id:"Test", Size:100}
-	pool.Init(initFunc)
+	err := pool.Init(initFunc)
+	if err != nil {
+		debug.PrintStack()
+		b.Errorf("Init Error (Benchmark, sync): %s\n", err)
+		b.FailNow()
+		return
+	}
 	go gettingLoop(pool, sign, 0)
 	go puttingLoop(pool, sign, 0)
 	<- sign
@@ -65,7 +83,13 @@ func BenchmarkRedisCacheProviderAsync(b *testing.B) {
 	}()
 	sign := make(chan bool, 2)
 	pool := &Pool{Id:"Test", Size:100}
-	pool.Init(initFunc)
+	err := pool.Init(initFunc)
+	if err != nil {
+		debug.PrintStack()
+		b.Errorf("Init Error (Benchmark, async): %s\n", err)
+		b.FailNow()
+		return
+	}
 	go gettingLoop(pool, sign, 100)
 	go puttingLoop(pool, sign, 100)
 	<- sign
