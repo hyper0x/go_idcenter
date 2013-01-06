@@ -10,23 +10,36 @@ import (
 	"time"
 )
 
-type RedisCacheProvider struct {
-	name                string
-	redisServerIp       string
-	redisServerPort     int
-	redisServerPassword string
-	cacheMutex          *sync.RWMutex // Do not need to initialize it when new.
-	redisPool           *redis.Pool   // Do not need to initialize it when new.
+var initContext sync.Once
+var cacheMutex *sync.RWMutex
+var redisPool *redis.Pool
+var iRedisCacheProvider *redisCacheProvider
+
+type RedisCacheParameter struct {
+	Name string
+	Ip string
+	Port int
+	Password string
 }
 
-func (self *RedisCacheProvider) Name() string {
-	return self.name
+type redisCacheProvider struct {
+	ProviderName string
 }
 
-func (self *RedisCacheProvider) Initialize() error {
-	self.cacheMutex = new(sync.RWMutex)
-	redisServerAddr := fmt.Sprintf("%s:%d", self.redisServerIp, self.redisServerPort)
-	self.redisPool = &redis.Pool{
+func New(parameter RedisCacheParameter) *redisCacheProvider {
+	initContext.Do(func() {
+		err := initialize(parameter)
+		if err != nil {
+			panic(err)
+		}
+	})
+	return iRedisCacheProvider
+}
+
+func initialize(parameter RedisCacheParameter) error {
+	redisServerAddr := fmt.Sprintf("%v:%v", parameter.Ip, parameter.Port)
+	lib.LogInfof("Initialize redis cache provider (%v)...", parameter)
+	redisPool = &redis.Pool{
 		MaxIdle:     3,
 		IdleTimeout: 240 * time.Second,
 		Dial: func() (redis.Conn, error) {
@@ -34,8 +47,8 @@ func (self *RedisCacheProvider) Initialize() error {
 			if err != nil {
 				return nil, err
 			}
-			if len(self.redisServerPassword) > 0 {
-				if _, err := c.Do("AUTH", self.redisServerPassword); err != nil {
+			if len(parameter.Password) > 0 {
+				if _, err := c.Do("AUTH", parameter.Password); err != nil {
 					c.Close()
 					return nil, err
 				}
@@ -43,12 +56,18 @@ func (self *RedisCacheProvider) Initialize() error {
 			return c, err
 		},
 	}
+	cacheMutex = new(sync.RWMutex)
+	iRedisCacheProvider = &redisCacheProvider{parameter.Name}
 	return nil
 }
 
-func (self *RedisCacheProvider) BuildList(group string, begin uint64, end uint64) error {
-	self.cacheMutex.Lock()
-	defer self.cacheMutex.Unlock()
+func (self *redisCacheProvider) Name() string {
+	return self.ProviderName
+}
+
+func (self *redisCacheProvider) BuildList(group string, begin uint64, end uint64) error {
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
 	if len(group) == 0 {
 		errorMsg := fmt.Sprintf("Invalid Parameter(s)! (group=%s)\n", group)
 		lib.LogError(errorMsg)
@@ -59,7 +78,7 @@ func (self *RedisCacheProvider) BuildList(group string, begin uint64, end uint64
 		lib.LogError(errorMsg)
 		return errors.New(errorMsg)
 	}
-	conn := self.redisPool.Get()
+	conn := redisPool.Get()
 	defer conn.Close()
 	exists, err := redis.Bool(conn.Do("EXISTS", group))
 	if err != nil {
@@ -87,15 +106,15 @@ func (self *RedisCacheProvider) BuildList(group string, begin uint64, end uint64
 			return errors.New(errorMsg)
 		}
 	}
-	lib.LogInfof("The list of group '%s' is Builded. (begin=%d, end=%d)\n", group, begin, end)
+	lib.LogInfof("The list of group '%s' is builded. (begin=%d, end=%d)\n", group, begin, end)
 	return nil
 
 }
 
-func (self *RedisCacheProvider) Pop(group string) (uint64, error) {
-	self.cacheMutex.RLock()
-	defer self.cacheMutex.RUnlock()
-	conn := self.redisPool.Get()
+func (self *redisCacheProvider) Pop(group string) (uint64, error) {
+	cacheMutex.RLock()
+	defer cacheMutex.RUnlock()
+	conn := redisPool.Get()
 	defer conn.Close()
 	value, err := conn.Do("RPOP", group)
 	if err != nil {
