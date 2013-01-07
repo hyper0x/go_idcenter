@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"github.com/ziutek/mymysql/autorc"
 	_ "github.com/ziutek/mymysql/thrsafe"
-	"go-idcenter/lib"
-	"strconv"
+	"go_idcenter/lib"
 	"sync"
-	"time"
 )
 
 var initContext sync.Once
@@ -42,7 +40,7 @@ func New(parameter StorageParameter) *mysqlStorageProvider {
 func initialize(parameter StorageParameter) error {
 	mysqlServerAddr := fmt.Sprintf("%v:%v", parameter.Ip, parameter.Port)
 	lib.LogInfof("Initialize mysql storage provider (parameter=%v)...", parameter)
-	mysqlConnPool := &Pool{Id:"MySQL Connection Pool", Size:int(parameter, PoolSize)}
+	mysqlConnPool := &Pool{Id:"MySQL Connection Pool", Size:int(parameter.PoolSize)}
 	initFunc := func() (interface{}, error) {
 		conn := autorc.New("tcp", "", mysqlServerAddr, parameter.User, parameter.Password)
 		err := conn.Use(parameter.DbName))

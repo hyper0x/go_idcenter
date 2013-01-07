@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"go-idcenter/lib"
+	"go_idcenter/lib"
 	"testing"
 	"runtime/debug"
 )

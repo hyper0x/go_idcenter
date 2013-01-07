@@ -1,9 +1,9 @@
-package idcenter
+package go_idcenter
 
 import (
 	"errors"
 	"fmt"
-	"go-idcenter/lib"
+	"go_idcenter/lib"
 	"reflect"
 	"time"
 )

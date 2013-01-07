@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/garyburd/redigo/redis"
-	"go-idcenter/lib"
+	"go_idcenter/lib"
 	"strconv"
 	"sync"
 	"time"
