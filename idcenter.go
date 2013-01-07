@@ -3,9 +3,8 @@ package go_idcenter
 import (
 	"errors"
 	"fmt"
+	. "go_idcenter/base"
 	"go_idcenter/lib"
-	"reflect"
-	"time"
 )
 
 const (
@@ -14,64 +13,38 @@ const (
 	DEFAULT_STEP  = 1000
 )
 
-type GroupInfo struct {
-	Name         string
-	Start        uint64
-	Range        IdRange
-	Step         uint32
-	Count        uint64
-	LastModified time.Duration
-}
-
-type IdRange struct {
-	Begin uint64
-	End   uint64
-}
-
-type Provider interface {
-	Name() string
-	Initialize() error
-}
-
-type CacheProvider interface {
-	Name() string
-	Initialize() error
-	BuildList(group string, begin uint64, end uint64) error
-	Pop(group string) (uint64, error)
-}
-
-type StorageProvider interface {
-	Name() string
-	Initialize() error
-	BuildInfo(group string, start uint64, step uint32) error
-	Get(group string) (*GroupInfo, error)
-	Propel(group string) (*IdRange, error)
-}
-
 var cacheProviderMap = make(map[string]CacheProvider)
 
 var storageProviderMap = make(map[string]StorageProvider)
 
-func RegisterCacheProvider(provider Provider) error {
-	if provider == nil {
+func RegisterProvider(prvd Provider) error {
+	defer func() {
+		if err := recover(); err != nil {
+			debug.PrintStack()
+			errorMsg := fmt.Sprintf("Occur FATAL error when register provider (provider=%v): %s", prvd, err)
+			lib.LogFatalln(errorMsg)
+			return errors.New(errorMsg)
+		}
+	}()
+	if prvd == nil {
 		panicMsg := "IdCenter: The provider is nil!\n"
 		lib.LogFatal(panicMsg)
 		panic(panicMsg)
 	}
-	name := provider.Name()
+	name := prvd.Name()
 	if len(name) == 0 {
 		panicMsg := "IdCenter: The name of provider is nil!\n"
 		lib.LogFatal(panicMsg)
 		panic(panicMsg)
 	}
-	switch provider.(type) {
+	switch t := prvd.(type) {
 	case CacheProvider:
 		if _, contains := cacheProviderMap[name]; contains {
 			errorMsg := fmt.Sprintf("IdCenter: Repetitive cache provider name '%s'!\n", name)
 			lib.LogError(errorMsg)
 			return errors.New(errorMsg)
 		}
-		cp, ok := interface{}(provider).(CacheProvider)
+		cp, ok := interface{}(prvd).(CacheProvider)
 		if !ok {
 			errorMsg := fmt.Sprintf("IdCenter: Incorrect cache provider type! (name '%s')\n", name)
 			lib.LogError(errorMsg)
@@ -84,7 +57,7 @@ func RegisterCacheProvider(provider Provider) error {
 			lib.LogError(errorMsg)
 			return errors.New(errorMsg)
 		}
-		sp, ok := interface{}(provider).(StorageProvider)
+		sp, ok := interface{}(prvd).(StorageProvider)
 		if !ok {
 			errorMsg := fmt.Sprintf("IdCenter: Incorrect cache provider type! (name '%s')\n", name)
 			lib.LogError(errorMsg)
@@ -92,7 +65,7 @@ func RegisterCacheProvider(provider Provider) error {
 		}
 		storageProviderMap[name] = sp
 	default:
-		panicMsg := fmt.Sprintf("IdCenter: Unexpected Provider type '%v'! (name=%s)\n", reflect.TypeOf(provider), name)
+		panicMsg := fmt.Sprintf("IdCenter: Unexpected Provider type '%v'! (name=%s)\n", t, name)
 		lib.LogFatal(panicMsg)
 		panic(panicMsg)
 	}
@@ -107,6 +80,14 @@ type IdCenterManager struct {
 }
 
 func (self *IdCenterManager) getId(group string) (uint64, error) {
+	defer func() {
+		if err := recover(); err != nil {
+			debug.PrintStack()
+			errorMsg := fmt.Sprintf("Occur FATAL error when get id (group=%v): %s", group, err)
+			lib.LogFatalln(errorMsg)
+			return 0, errors.New(errorMsg)
+		}
+	}()
 	cacheProvider, contains := cacheProviderMap[self.CacheProviderName]
 	if !contains {
 		panicMsg := fmt.Sprintf("IdCenter: The cache Provider named '%s' is NOTEXISTENT!\n", self.CacheProviderName)
@@ -148,11 +129,15 @@ func (self *IdCenterManager) getId(group string) (uint64, error) {
 		if currentStep <= 0 {
 			currentStep = DEFAULT_STEP
 		}
-		err = storageProvider.BuildInfo(group, currentStart, currentStep)
+		ok, err := storageProvider.BuildInfo(group, currentStart, currentStep)
 		if err != nil {
 			errorMsg := fmt.Sprintf("Occur error when initialize group '%s': %s", group, err.Error())
 			lib.LogErrorln(errorMsg)
 			return 0, err
+		}
+		if !ok {
+			warnMsg := fmt.Sprintf("Building group info is FAILING. Maybe the group already exists. (group=%v)", group)
+			lib.LogWarnln(warnMsg)
 		}
 	}
 	idRange, err := storageProvider.Propel(group)
@@ -163,11 +148,15 @@ func (self *IdCenterManager) getId(group string) (uint64, error) {
 	}
 	currentBegin := idRange.Begin
 	currentEnd := idRange.End
-	cacheProvider.BuildList(group, currentBegin, currentEnd)
+	ok, err := cacheProvider.BuildList(group, currentBegin, currentEnd)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Occur error when build id list for group '%s': %s\n", group, err.Error())
 		lib.LogError(errorMsg)
 		return 0, err
+	}
+	if !ok {
+		warnMsg := fmt.Sprintf("Building id list is FAILING. (group=%v)", group)
+		lib.LogWarnln(warnMsg)
 	}
 	id, err = cacheProvider.Pop(group)
 	if err != nil {

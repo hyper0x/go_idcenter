@@ -1,4 +1,4 @@
-go-idcenter
+go_idcenter
 ===========
 
 A simple implement of id center.

@@ -2,8 +2,8 @@ package provider
 
 import (
 	"go_idcenter/lib"
-	"testing"
 	"runtime/debug"
+	"testing"
 )
 
 func TestRedisCacheProvider(t *testing.T) {
@@ -14,16 +14,20 @@ func TestRedisCacheProvider(t *testing.T) {
 		}
 	}()
 	parameter := CacheParameter{
-		Name:            "Test Redis Cache Provider",
-		Ip:   "127.0.0.1",
-		Port: 6379,
+		Name:     "Test Redis Cache Provider",
+		Ip:       "127.0.0.1",
+		Port:     6379,
 		PoolSize: uint16(3),
 	}
-	rcp := New(parameter)
+	rcp := NewCacheProvider(parameter)
 	group := "test"
-	err := rcp.BuildList(group, 1, 100)
+	ok, err := rcp.BuildList(group, 1, 100)
 	if err != nil {
 		t.Errorf("BuildList Error: %s", err.Error())
+		t.FailNow()
+	}
+	if !ok {
+		t.Errorf("Building list is Failing: %s", err.Error())
 		t.FailNow()
 	}
 	var value uint64
