@@ -21,20 +21,22 @@ func TestRedisCacheProvider(t *testing.T) {
 	}
 	rcp := NewCacheProvider(parameter)
 	group := "test"
+
+	// Build & Pop
 	ok, err := rcp.BuildList(group, 1, 100)
 	if err != nil {
-		t.Errorf("BuildList Error: %s", err.Error())
+		t.Errorf("BuildList Error: %s\n", err.Error())
 		t.FailNow()
 	}
 	if !ok {
-		t.Errorf("Building list is Failing: %s", err.Error())
+		t.Error("Building list is Failing!\n")
 		t.FailNow()
 	}
 	var value uint64
 	for i := 1; i < 100; i++ {
 		value, err = rcp.Pop(group)
 		if err != nil {
-			t.Errorf("Pop Error: %s", err.Error())
+			t.Errorf("Pop Error: %s\n", err.Error())
 			t.FailNow()
 		}
 	}
@@ -44,9 +46,29 @@ func TestRedisCacheProvider(t *testing.T) {
 	}
 	switch err.(type) {
 	case *lib.EmptyListError:
-		t.Logf("Pop from a empty list of group '%s'.", group)
+		t.Logf("Pop from a empty list of group '%s'.\n", group)
 	default:
 		t.Errorf("Pop Error: %s", err.Error())
+		t.FailNow()
+	}
+
+	// Build & Clear
+	ok, err = rcp.BuildList(group, 1, 100)
+	if err != nil {
+		t.Errorf("BuildList Error: %s\n", err.Error())
+		t.FailNow()
+	}
+	if !ok {
+		t.Error("Building list is Failing!\n")
+		t.FailNow()
+	}
+	ok, err = rcp.Clear(group)
+	if err != nil {
+		t.Errorf("Clear Error: %s", err.Error())
+		t.FailNow()
+	}
+	if !ok {
+		t.Error("Clear is Failing!\n")
 		t.FailNow()
 	}
 }

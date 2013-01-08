@@ -89,13 +89,13 @@ func (self *redisCacheProvider) BuildList(group string, begin uint64, end uint64
 		return false, errors.New(errorMsg)
 	}
 	if exists {
-		effectedNumber, err := redis.Int(conn.Do("DEL", group))
+		effectedKeys, err := redis.Int(conn.Do("DEL", group))
 		if err != nil {
 			errorMsg := fmt.Sprintf("Redis Error <DEL %s>: %s\n ", group, err.Error())
 			lib.LogError(errorMsg)
 			return false, errors.New(errorMsg)
 		}
-		if effectedNumber < 1 {
+		if effectedKeys < 1 {
 			warningMsg := fmt.Sprintf("Redis warning <DEL %s>: seemingly failed.\n ", group)
 			lib.LogWarn(warningMsg)
 		}
@@ -142,6 +142,27 @@ func (self *redisCacheProvider) Pop(group string) (uint64, error) {
 		return 0, errors.New(errorMsg)
 	}
 	return number, nil
+}
+
+func (self *redisCacheProvider) Clear(group string) (bool, error) {
+	if len(group) == 0 {
+		errorMsg := fmt.Sprint("The group name is INVALID!")
+		lib.LogErrorln(errorMsg)
+		return false, errors.New(errorMsg)
+	}
+	rwSign := getRWSign(group)
+	rwSign.RSet()
+	defer rwSign.RUnset()
+	conn := redisPool.Get()
+	defer conn.Close()
+	effectedKeys, err := redis.Int(conn.Do("DEL", group))
+	if err != nil {
+		errorMsg := fmt.Sprintf("Redis Error <DEL %s>: %s\n ", group, err.Error())
+		lib.LogError(errorMsg)
+		return false, errors.New(errorMsg)
+	}
+	lib.LogInfof("Redis Cache Provider: Clear group '%s': %v", group, (effectedKeys > 0))
+	return true, nil
 }
 
 func getRWSign(group string) *lib.RWSign {
