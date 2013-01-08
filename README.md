@@ -22,7 +22,7 @@ go get github.com/ziutek/mymysql/thrsafe
 go get github.com/ziutek/mymysql/autorc
 go get github.com/ziutek/mymysql/godrv
 ```
-4. Edit go-idcenter.config for your need.
+4. Edit go_idcenter.config for your need.
 
 5. Run:
 
