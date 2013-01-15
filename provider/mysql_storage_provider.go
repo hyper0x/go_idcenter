@@ -100,7 +100,11 @@ func releaseMysqlConnection(conn *autorc.Conn) bool {
 	return result
 }
 
-func (self *mysqlStorageProvider) BuildInfo(group string, start uint64, step uint32) (bool, error) {
+func (self mysqlStorageProvider) Name() string {
+	return self.ProviderName
+}
+
+func (self mysqlStorageProvider) BuildInfo(group string, start uint64, step uint32) (bool, error) {
 	if len(group) == 0 {
 		errorMsg := fmt.Sprint("The group name is INVALID!")
 		lib.LogErrorln(errorMsg)
@@ -137,7 +141,7 @@ func (self *mysqlStorageProvider) BuildInfo(group string, start uint64, step uin
 	return true, nil
 }
 
-func (self *mysqlStorageProvider) Get(group string) (*GroupInfo, error) {
+func (self mysqlStorageProvider) Get(group string) (*GroupInfo, error) {
 	if len(group) == 0 {
 		errorMsg := fmt.Sprint("The group name is INVALID!")
 		lib.LogErrorln(errorMsg)
@@ -154,7 +158,7 @@ func (self *mysqlStorageProvider) Get(group string) (*GroupInfo, error) {
 	return self.get(conn, group)
 }
 
-func (self *mysqlStorageProvider) get(conn *autorc.Conn, group string) (*GroupInfo, error) {
+func (self mysqlStorageProvider) get(conn *autorc.Conn, group string) (*GroupInfo, error) {
 	errorMsgPrefix := fmt.Sprintf("Occur error when get group info (group=%v)", group)
 	rawSql := "select `start`, `step`, `count`, `begin`, `end`, `last_modified` from `%s` where `name`='%s'"
 	sql := fmt.Sprintf(rawSql, TABLE_NAME, group)
@@ -178,7 +182,7 @@ func (self *mysqlStorageProvider) get(conn *autorc.Conn, group string) (*GroupIn
 	return &groupInfo, nil
 }
 
-func (self *mysqlStorageProvider) Propel(group string) (*IdRange, error) {
+func (self mysqlStorageProvider) Propel(group string) (*IdRange, error) {
 	if len(group) == 0 {
 		errorMsg := fmt.Sprint("The group name is INVALID!")
 		lib.LogErrorln(errorMsg)
@@ -233,7 +237,7 @@ func (self *mysqlStorageProvider) Propel(group string) (*IdRange, error) {
 	return &newIdRange, nil
 }
 
-func (self *mysqlStorageProvider) Clear(group string) (bool, error) {
+func (self mysqlStorageProvider) Clear(group string) (bool, error) {
 	if len(group) == 0 {
 		errorMsg := fmt.Sprint("The group name is INVALID!")
 		lib.LogErrorln(errorMsg)
@@ -259,7 +263,7 @@ func (self *mysqlStorageProvider) Clear(group string) (bool, error) {
 	if result != nil {
 		affectedRows = result.AffectedRows()
 	}
-	lib.LogInfof("MySQL Storage Provider: Clear group '%s': %v", group, (affectedRows > 0))
+	lib.LogInfof("MySQL Storage Provider: The group '%s' is cleared. (affectedRows=%v)", group, (affectedRows > 0))
 	return true, nil
 }
 

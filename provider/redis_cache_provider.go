@@ -62,11 +62,11 @@ func initializeForCacheProvider(parameter CacheParameter) error {
 	return nil
 }
 
-func (self *redisCacheProvider) Name() string {
+func (self redisCacheProvider) Name() string {
 	return self.ProviderName
 }
 
-func (self *redisCacheProvider) BuildList(group string, begin uint64, end uint64) (bool, error) {
+func (self redisCacheProvider) BuildList(group string, begin uint64, end uint64) (bool, error) {
 	if len(group) == 0 {
 		errorMsg := fmt.Sprint("The group name is INVALID!")
 		lib.LogErrorln(errorMsg)
@@ -113,7 +113,7 @@ func (self *redisCacheProvider) BuildList(group string, begin uint64, end uint64
 
 }
 
-func (self *redisCacheProvider) Pop(group string) (uint64, error) {
+func (self redisCacheProvider) Pop(group string) (uint64, error) {
 	if len(group) == 0 {
 		errorMsg := fmt.Sprint("The group name is INVALID!")
 		lib.LogErrorln(errorMsg)
@@ -144,7 +144,7 @@ func (self *redisCacheProvider) Pop(group string) (uint64, error) {
 	return number, nil
 }
 
-func (self *redisCacheProvider) Clear(group string) (bool, error) {
+func (self redisCacheProvider) Clear(group string) (bool, error) {
 	if len(group) == 0 {
 		errorMsg := fmt.Sprint("The group name is INVALID!")
 		lib.LogErrorln(errorMsg)
@@ -161,7 +161,7 @@ func (self *redisCacheProvider) Clear(group string) (bool, error) {
 		lib.LogError(errorMsg)
 		return false, errors.New(errorMsg)
 	}
-	lib.LogInfof("Redis Cache Provider: Clear group '%s': %v", group, (effectedKeys > 0))
+	lib.LogInfof("Redis Cache Provider: The group '%s' is cleared. (affectedKeys=%v)", group, (effectedKeys > 0))
 	return true, nil
 }
 

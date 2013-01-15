@@ -1,50 +1,51 @@
 package go_idcenter
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	. "go_idcenter/base"
 	"go_idcenter/lib"
+	"reflect"
+	"runtime/debug"
 )
 
 const (
-	_             = iota
-	DEFAULT_START = 1
-	DEFAULT_STEP  = 1000
+	_ = iota
+	DEFAULT_START
+	DEFAULT_STEP = 1000
 )
 
 var cacheProviderMap = make(map[string]CacheProvider)
-
 var storageProviderMap = make(map[string]StorageProvider)
 
-func RegisterProvider(prvd Provider) error {
+func RegisterProvider(provider Provider) error {
 	defer func() {
 		if err := recover(); err != nil {
 			debug.PrintStack()
-			errorMsg := fmt.Sprintf("Occur FATAL error when register provider (provider=%v): %s", prvd, err)
+			errorMsg := fmt.Sprintf("Occur FATAL error when register provider (provider=%v): %s", provider, err)
 			lib.LogFatalln(errorMsg)
-			return errors.New(errorMsg)
 		}
 	}()
-	if prvd == nil {
+	if provider == nil {
 		panicMsg := "IdCenter: The provider is nil!\n"
 		lib.LogFatal(panicMsg)
 		panic(panicMsg)
 	}
-	name := prvd.Name()
+	name := provider.Name()
 	if len(name) == 0 {
 		panicMsg := "IdCenter: The name of provider is nil!\n"
 		lib.LogFatal(panicMsg)
 		panic(panicMsg)
 	}
-	switch t := prvd.(type) {
+	switch t := interface{}(provider).(type) {
 	case CacheProvider:
 		if _, contains := cacheProviderMap[name]; contains {
 			errorMsg := fmt.Sprintf("IdCenter: Repetitive cache provider name '%s'!\n", name)
 			lib.LogError(errorMsg)
 			return errors.New(errorMsg)
 		}
-		cp, ok := interface{}(prvd).(CacheProvider)
+		cp, ok := interface{}(provider).(CacheProvider)
 		if !ok {
 			errorMsg := fmt.Sprintf("IdCenter: Incorrect cache provider type! (name '%s')\n", name)
 			lib.LogError(errorMsg)
@@ -57,7 +58,7 @@ func RegisterProvider(prvd Provider) error {
 			lib.LogError(errorMsg)
 			return errors.New(errorMsg)
 		}
-		sp, ok := interface{}(prvd).(StorageProvider)
+		sp, ok := interface{}(provider).(StorageProvider)
 		if !ok {
 			errorMsg := fmt.Sprintf("IdCenter: Incorrect cache provider type! (name '%s')\n", name)
 			lib.LogError(errorMsg)
@@ -72,6 +73,48 @@ func RegisterProvider(prvd Provider) error {
 	return nil
 }
 
+func UnregisterProvider(provider Provider) {
+	defer func() {
+		if err := recover(); err != nil {
+			debug.PrintStack()
+			errorMsg := fmt.Sprintf("Occur FATAL error when unregister provider (provider=%v): %s", provider, err)
+			lib.LogFatalln(errorMsg)
+		}
+	}()
+	if provider == nil {
+		panicMsg := "IdCenter: The provider is nil!\n"
+		lib.LogFatal(panicMsg)
+		panic(panicMsg)
+	}
+	name := provider.Name()
+	if len(name) == 0 {
+		panicMsg := "IdCenter: The name of provider is nil!\n"
+		lib.LogFatal(panicMsg)
+		panic(panicMsg)
+	}
+	switch t := interface{}(provider).(type) {
+	case CacheProvider:
+		_, contains := cacheProviderMap[name]
+		if contains {
+			delete(cacheProviderMap, name)
+		} else {
+			lib.LogWarnf("IdCenter: The cache Provider named '%s' is NOTEXISTENT!\n", name)
+		}
+	case StorageProvider:
+		_, contains := storageProviderMap[name]
+		if contains {
+			delete(storageProviderMap, name)
+		} else {
+			lib.LogWarnf("IdCenter: The storage Provider named '%s' is NOTEXISTENT!\n", name)
+		}
+	default:
+		panicMsg := fmt.Sprintf("IdCenter: Unexpected Provider type '%v'! (name=%s)\n", t, name)
+		lib.LogFatal(panicMsg)
+		panic(panicMsg)
+	}
+	return
+}
+
 type IdCenterManager struct {
 	CacheProviderName   string
 	StorageProviderName string
@@ -79,29 +122,20 @@ type IdCenterManager struct {
 	Step                uint32
 }
 
-func (self *IdCenterManager) getId(group string) (uint64, error) {
+func (self *IdCenterManager) GetId(group string) (uint64, error) {
 	defer func() {
 		if err := recover(); err != nil {
 			debug.PrintStack()
 			errorMsg := fmt.Sprintf("Occur FATAL error when get id (group=%v): %s", group, err)
 			lib.LogFatalln(errorMsg)
-			return 0, errors.New(errorMsg)
 		}
 	}()
-	cacheProvider, contains := cacheProviderMap[self.CacheProviderName]
-	if !contains {
-		panicMsg := fmt.Sprintf("IdCenter: The cache Provider named '%s' is NOTEXISTENT!\n", self.CacheProviderName)
-		panic(panicMsg)
-	}
-	storageProvider, contains := storageProviderMap[self.StorageProviderName]
-	if !contains {
-		panicMsg := fmt.Sprintf("IdCenter: The storage Provider named '%s' is NOTEXISTENT!\n", self.StorageProviderName)
-		panic(panicMsg)
-	}
+	cacheProvider := self.getCacheProvider()
+	storageProvider := self.getStorageProvider()
 	id, err := cacheProvider.Pop(group)
 	if err != nil {
 		switch err.(type) {
-		case lib.EmptyListError:
+		case *lib.EmptyListError:
 			warningMsg := fmt.Sprintf("Warning: The list of group '%s' is empty.", group)
 			lib.LogWarn(warningMsg)
 		default:
@@ -171,4 +205,49 @@ func (self *IdCenterManager) getId(group string) (uint64, error) {
 		}
 	}
 	return id, nil
+}
+
+func (self *IdCenterManager) Clear(group string) (bool, error) {
+	defer func() {
+		if err := recover(); err != nil {
+			debug.PrintStack()
+			errorMsg := fmt.Sprintf("Occur FATAL error when clear (group=%v): %s", group, err)
+			lib.LogFatalln(errorMsg)
+		}
+	}()
+	storageProvider := self.getStorageProvider()
+	spResult, spErr := storageProvider.Clear(group)
+	cacheProvider := self.getCacheProvider()
+	cpResult, cpErr := cacheProvider.Clear(group)
+	if spErr != nil || cpErr != nil {
+		var errorMsgBuffer bytes.Buffer
+		errorMsgBuffer.WriteString("Clear Failing:")
+		if spErr != nil {
+			errorMsgBuffer.WriteString(fmt.Sprintf("%s: %s; ", reflect.TypeOf(storageProvider).Name(), spErr))
+		}
+		if cpErr != nil {
+			errorMsgBuffer.WriteString(fmt.Sprintf("%s: %s; ", reflect.TypeOf(cacheProvider).Name(), cpErr))
+		}
+		errorMsgBuffer.WriteString("\n")
+		return false, errors.New(errorMsgBuffer.String())
+	}
+	return (spResult && cpResult), nil
+}
+
+func (self *IdCenterManager) getCacheProvider() CacheProvider {
+	cacheProvider, contains := cacheProviderMap[self.CacheProviderName]
+	if !contains {
+		panicMsg := fmt.Sprintf("IdCenter: The cache Provider named '%s' is NOTEXISTENT! Please register the provider.\n", self.CacheProviderName)
+		panic(panicMsg)
+	}
+	return cacheProvider
+}
+
+func (self *IdCenterManager) getStorageProvider() StorageProvider {
+	storageProvider, contains := storageProviderMap[self.StorageProviderName]
+	if !contains {
+		panicMsg := fmt.Sprintf("IdCenter: The storage Provider named '%s' is NOTEXISTENT! Please register the provider.\n", self.StorageProviderName)
+		panic(panicMsg)
+	}
+	return storageProvider
 }
