@@ -21,7 +21,12 @@ go get github.com/garyburd/redigo/redis
 go get github.com/ziutek/mymysql/thrsafe
 go get github.com/ziutek/mymysql/autorc
 go get github.com/ziutek/mymysql/godrv
+
+# install go_lib
+cd <$GOPATH1/src> # $GOPATH1 is the first part of $GOPATH.
+git clone https://github.com/hyper-carrot/go_lib.git
 ```
+
 4. Edit go_idcenter.config for your need.
 
 5. Run:
@@ -30,6 +35,6 @@ To be continue... (The web server code is not ready.)
 
 ## License
  
-Copyright (C) 2012
+Copyright (C) 2013
 
 Distributed under the BSD-style license, the same as Go.

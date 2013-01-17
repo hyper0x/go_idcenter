@@ -10,7 +10,7 @@ func TestRedisCacheProvider(t *testing.T) {
 	defer func() {
 		if err := recover(); err != nil {
 			debug.PrintStack()
-			lib.LogErrorf("Fatal Error: %s\n", err)
+			t.Errorf("Fatal Error: %s\n", err)
 		}
 	}()
 	parameter := CacheParameter{
