@@ -5,7 +5,7 @@ A simple implement of id center.
 
 ## Usage
 
-1. Ensure the project path in $GOPATH
+1. Ensure the project in dir '$GOPATH/src'
 
 2. Optional: 
    - Install [Redis](http://redis.io/) database.
@@ -22,7 +22,7 @@ go get github.com/ziutek/mymysql/thrsafe
 go get github.com/ziutek/mymysql/autorc
 go get github.com/ziutek/mymysql/godrv
 
-# install go_lib
+# go_lib
 cd <$GOPATH1/src> # $GOPATH1 is the first part of $GOPATH.
 git clone https://github.com/hyper-carrot/go_lib.git
 ```
