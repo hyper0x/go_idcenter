@@ -7,6 +7,7 @@ import (
 	_ "github.com/ziutek/mymysql/thrsafe"
 	. "go_idcenter/base"
 	"go_lib"
+	"go_lib/pool"
 	"sync"
 	"time"
 )
@@ -31,7 +32,7 @@ type mysqlStorageProvider struct {
 }
 
 var storageInitContext sync.Once
-var mysqlConnPool *go_lib.Pool
+var mysqlConnPool *pool.Pool
 var signMap map[string]*go_lib.Sign
 var iMysqlStorageProvider *mysqlStorageProvider
 
@@ -48,7 +49,7 @@ func NewStorageProvider(parameter StorageParameter) *mysqlStorageProvider {
 func initializeForStorageProvider(parameter StorageParameter) error {
 	mysqlServerAddr := fmt.Sprintf("%v:%v", parameter.Ip, parameter.Port)
 	go_lib.LogInfof("Initialize mysql storage provider (parameter=%v)...", parameter)
-	mysqlConnPool = &go_lib.Pool{Id: "MySQL Connection Pool", Size: int(parameter.PoolSize)}
+	mysqlConnPool = &pool.Pool{Id: "MySQL Connection Pool", Size: int(parameter.PoolSize)}
 	initFunc := func() (interface{}, error) {
 		conn := autorc.New("tcp", "", mysqlServerAddr, parameter.User, parameter.Password)
 		conn.Raw.Register("set names utf8")
