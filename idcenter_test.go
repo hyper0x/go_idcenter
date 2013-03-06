@@ -6,6 +6,7 @@ import (
 	"go_idcenter/base"
 	"go_idcenter/provider"
 	"testing"
+	"time"
 )
 
 func TestIdCenterManager(t *testing.T) {
@@ -52,11 +53,11 @@ func TestIdCenterManager(t *testing.T) {
 	}
 }
 
-func BenchmarkIdCenterManager(b *testing.B) {
+func TestIdCenterManagerForBenchmark(t *testing.T) {
 	cp, sp, err := registerProviders()
 	if err != nil {
-		b.Errorf("Provider register error: %s", err)
-		b.FailNow()
+		t.Errorf("Provider register error: %s", err)
+		t.FailNow()
 	}
 	start := uint64(1)
 	step := uint32(100)
@@ -70,33 +71,49 @@ func BenchmarkIdCenterManager(b *testing.B) {
 	defer func() {
 		result, err := idCenterManager.Clear(group)
 		if err != nil {
-			b.Errorf("Clear Error: %s", err)
-			b.FailNow()
+			t.Errorf("Clear Error: %s", err)
+			t.FailNow()
 		}
-		b.Logf("Clear Result: %v", result)
+		t.Logf("Clear Result: %v", result)
 		UnregisterProvider(cp)
 		UnregisterProvider(sp)
 	}()
 	var previousId uint64
 	var currentId uint64
-	for i := 1; i <= b.N; i++ {
-		currentId, err = idCenterManager.GetId(group)
-		if err != nil {
-			b.Errorf("Get id error: %s", err)
-		}
-		if previousId == 0 {
-			if currentId != start {
-				b.Logf("The id '%d' is not equals start '%d'.", currentId, start)
-				b.FailNow()
+	loopNumbers := []int{1000, 2000, 5000, 10000}
+	testNumber := len(loopNumbers)
+	results := make([][]interface{}, testNumber)
+	for j := 0; j < testNumber; j++ {
+		loopNumber := loopNumbers[j]
+		t.Logf("Testing by loop number '%d'...\n", loopNumber)
+		ns1 := time.Now().UnixNano()
+		for i := 1; i <= loopNumber; i++ {
+			currentId, err = idCenterManager.GetId(group)
+			if err != nil {
+				t.Errorf("Get id error: %s", err)
 			}
-		} else {
-			expectedId := previousId + 1
-			if currentId != expectedId {
-				b.Logf("The id '%d' is not equals '%d' (%d + 1).", currentId, expectedId, previousId)
-				b.FailNow()
+			if previousId == 0 {
+				if currentId != start {
+					t.Logf("The id '%d' is not equals start '%d'.", currentId, start)
+					t.FailNow()
+				}
+			} else {
+				expectedId := previousId + 1
+				if currentId != expectedId {
+					t.Logf("The id '%d' is not equals '%d' (%d + 1).", currentId, expectedId, previousId)
+					t.FailNow()
+				}
 			}
+			previousId = currentId
 		}
-		previousId = currentId
+		ns2 := time.Now().UnixNano()
+		totalCostNs := ns2 - ns1
+		totalCost := float64(totalCostNs) / float64(1000)
+		eachCost := float64(totalCost) / float64(loopNumber)
+		results[j] = []interface{}{loopNumber, totalCost, eachCost}
+	}
+	for _, n := range results {
+		fmt.Printf("Benchmark Result (loopNumber=%d) - Total cost (microsecond): %f, Each cost (microsecond): %f.\n", n[0], n[1], n[2])
 	}
 }
 
