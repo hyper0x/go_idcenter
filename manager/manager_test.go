@@ -1,4 +1,4 @@
-package go_idcenter
+package manager
 
 import (
 	"errors"
@@ -118,7 +118,7 @@ func TestIdCenterManagerForBenchmark(t *testing.T) {
 }
 
 func registerProvidersForTest() (base.CacheProvider, base.StorageProvider, error) {
-	cacheParameter := provider.CacheParameter{
+	cacheParameter := provider.RedisParameter{
 		Name:     "Test Redis Cache Provider",
 		Ip:       "127.0.0.1",
 		Port:     6379,
@@ -130,7 +130,7 @@ func registerProvidersForTest() (base.CacheProvider, base.StorageProvider, error
 		errorMsg := fmt.Sprintf("Redis Cache provider register error: %s", err)
 		return nil, nil, errors.New(errorMsg)
 	}
-	storageParameter := provider.StorageParameter{
+	storageParameter := provider.MysqlParameter{
 		Name:     "Test MySQL Storage Provider",
 		Ip:       "127.0.0.1",
 		Port:     3306,

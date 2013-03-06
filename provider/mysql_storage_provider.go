@@ -17,7 +17,7 @@ const (
 	TIMEOUT_MS = time.Duration(100)
 )
 
-type StorageParameter struct {
+type MysqlParameter struct {
 	Name     string
 	Ip       string
 	Port     int
@@ -36,7 +36,7 @@ var mysqlConnPool *pool.Pool
 var signMap map[string]*go_lib.Sign
 var iMysqlStorageProvider *mysqlStorageProvider
 
-func NewMysqlStorageProvider(parameter StorageParameter) *mysqlStorageProvider {
+func NewMysqlStorageProvider(parameter MysqlParameter) *mysqlStorageProvider {
 	storageInitContext.Do(func() {
 		err := initializeForStorageProvider(parameter)
 		if err != nil {
@@ -46,7 +46,7 @@ func NewMysqlStorageProvider(parameter StorageParameter) *mysqlStorageProvider {
 	return iMysqlStorageProvider
 }
 
-func initializeForStorageProvider(parameter StorageParameter) error {
+func initializeForStorageProvider(parameter MysqlParameter) error {
 	mysqlServerAddr := fmt.Sprintf("%v:%v", parameter.Ip, parameter.Port)
 	go_lib.LogInfof("Initialize mysql storage provider (parameter=%v)...", parameter)
 	mysqlConnPool = &pool.Pool{Id: "MySQL Connection Pool", Size: int(parameter.PoolSize)}

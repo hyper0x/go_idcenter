@@ -1,4 +1,4 @@
-package lib
+package base
 
 type EmptyListError struct {
 	Msg string

@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"go_idcenter/lib"
+	"go_idcenter/base"
 	"runtime/debug"
 	"testing"
 )
@@ -13,13 +13,13 @@ func TestRedisCacheProvider(t *testing.T) {
 			t.Errorf("Fatal Error: %s\n", err)
 		}
 	}()
-	parameter := CacheParameter{
+	parameter := RedisParameter{
 		Name:     "Test Redis Cache Provider",
 		Ip:       "127.0.0.1",
 		Port:     6379,
 		PoolSize: uint16(3),
 	}
-	rcp := NewCacheProvider(parameter)
+	rcp := NewRedisCacheProvider(parameter)
 	group := "test"
 
 	// Build & Pop
@@ -45,7 +45,7 @@ func TestRedisCacheProvider(t *testing.T) {
 		t.FailNow()
 	}
 	switch err.(type) {
-	case *lib.EmptyListError:
+	case *base.EmptyListError:
 		t.Logf("Pop from a empty list of group '%s'.\n", group)
 	default:
 		t.Errorf("Pop Error: %s", err.Error())

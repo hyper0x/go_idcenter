@@ -2,7 +2,6 @@ package provider
 
 import (
 	. "go_idcenter/base"
-	// "go_idcenter/lib"
 	// "runtime/debug"
 	"testing"
 )
@@ -14,7 +13,7 @@ func TestMysqlStorageProvider(t *testing.T) {
 	// 		lib.LogErrorf("Fatal Error: %s\n", err)
 	// 	}
 	// }()
-	parameter := StorageParameter{
+	parameter := MysqlParameter{
 		Name:     "Test MySQL Storage Provider",
 		Ip:       "127.0.0.1",
 		Port:     3306,
@@ -23,7 +22,7 @@ func TestMysqlStorageProvider(t *testing.T) {
 		Password: "haolin",
 		PoolSize: uint16(3),
 	}
-	msp := NewStorageProvider(parameter)
+	msp := NewMysqlStorageProvider(parameter)
 	group := "test"
 	start := uint64(100)
 	step := uint32(1000)

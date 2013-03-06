@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/garyburd/redigo/redis"
-	"go_idcenter/lib"
+	"go_idcenter/base"
 	"go_lib"
 	"strconv"
 	"sync"
@@ -16,7 +16,7 @@ var rwSignMap map[string]*go_lib.RWSign
 var redisPool *redis.Pool
 var iRedisCacheProvider *redisCacheProvider
 
-type CacheParameter struct {
+type RedisParameter struct {
 	Name     string
 	Ip       string
 	Port     int
@@ -28,7 +28,7 @@ type redisCacheProvider struct {
 	ProviderName string
 }
 
-func NewRedisCacheProvider(parameter CacheParameter) *redisCacheProvider {
+func NewRedisCacheProvider(parameter RedisParameter) *redisCacheProvider {
 	cacheInitContext.Do(func() {
 		err := initializeForCacheProvider(parameter)
 		if err != nil {
@@ -38,7 +38,7 @@ func NewRedisCacheProvider(parameter CacheParameter) *redisCacheProvider {
 	return iRedisCacheProvider
 }
 
-func initializeForCacheProvider(parameter CacheParameter) error {
+func initializeForCacheProvider(parameter RedisParameter) error {
 	redisServerAddr := fmt.Sprintf("%v:%v", parameter.Ip, parameter.Port)
 	go_lib.LogInfof("Initialize redis cache provider (parameter=%v)...", parameter)
 	redisPool = &redis.Pool{
@@ -133,7 +133,7 @@ func (self redisCacheProvider) Pop(group string) (uint64, error) {
 	}
 	if value == nil {
 		errorMsg := fmt.Sprintf("Empty List! (group=%s)", group)
-		return 0, &lib.EmptyListError{errorMsg}
+		return 0, &base.EmptyListError{errorMsg}
 	}
 	baValue := value.([]uint8)
 	number, err := strconv.ParseUint(string(baValue), 10, 64)
