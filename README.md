@@ -27,11 +27,16 @@ cd <$GOPATH1/src> # $GOPATH1 is the first part of $GOPATH.
 git clone https://github.com/hyper-carrot/go_lib.git
 ```
 
-4. Edit go_idcenter.config for your need.
+4. Edit id_center.config for your need.
 
 5. Run:
 
-To be continue... (The web server code is not ready.)
+```bash
+cd <project_path>
+go run server.go
+```
+
+6. Access through web browser, url: ```http://<hostname>:<port>/id?group=<group name>```.
 
 ## License
  
