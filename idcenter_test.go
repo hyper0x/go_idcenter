@@ -10,7 +10,7 @@ import (
 )
 
 func TestIdCenterManager(t *testing.T) {
-	cp, sp, err := registerProviders()
+	cp, sp, err := registerProvidersForTest()
 	if err != nil {
 		t.Errorf("Provider register error: %s", err)
 		t.FailNow()
@@ -54,7 +54,7 @@ func TestIdCenterManager(t *testing.T) {
 }
 
 func TestIdCenterManagerForBenchmark(t *testing.T) {
-	cp, sp, err := registerProviders()
+	cp, sp, err := registerProvidersForTest()
 	if err != nil {
 		t.Errorf("Provider register error: %s", err)
 		t.FailNow()
@@ -117,34 +117,20 @@ func TestIdCenterManagerForBenchmark(t *testing.T) {
 	}
 }
 
-func registerProviders() (base.CacheProvider, base.StorageProvider, error) {
-	rcp := getRedisCacheProvider()
-	err := RegisterProvider(interface{}(rcp).(base.Provider))
-	if err != nil {
-		errorMsg := fmt.Sprintf("Redis Cache provider register error: %s", err)
-		return nil, nil, errors.New(errorMsg)
-	}
-	msp := getMysqlStorageProvider()
-	err = RegisterProvider(interface{}(msp).(base.Provider))
-	if err != nil {
-		errorMsg := fmt.Sprintf("MySQL Storage provider register error: %s", err)
-		return nil, nil, errors.New(errorMsg)
-	}
-	return rcp, msp, nil
-}
-
-func getRedisCacheProvider() base.CacheProvider {
-	parameter := provider.CacheParameter{
+func registerProvidersForTest() (base.CacheProvider, base.StorageProvider, error) {
+	cacheParameter := provider.CacheParameter{
 		Name:     "Test Redis Cache Provider",
 		Ip:       "127.0.0.1",
 		Port:     6379,
 		PoolSize: uint16(3),
 	}
-	return interface{}(*provider.NewCacheProvider(parameter)).(base.CacheProvider)
-}
-
-func getMysqlStorageProvider() base.StorageProvider {
-	parameter := provider.StorageParameter{
+	rcp := NewRedisCacheProvider(cacheParameter)
+	err := RegisterProvider(interface{}(rcp).(base.Provider))
+	if err != nil {
+		errorMsg := fmt.Sprintf("Redis Cache provider register error: %s", err)
+		return nil, nil, errors.New(errorMsg)
+	}
+	storageParameter := provider.StorageParameter{
 		Name:     "Test MySQL Storage Provider",
 		Ip:       "127.0.0.1",
 		Port:     3306,
@@ -153,5 +139,11 @@ func getMysqlStorageProvider() base.StorageProvider {
 		Password: "haolin",
 		PoolSize: uint16(3),
 	}
-	return interface{}(*provider.NewStorageProvider(parameter)).(base.StorageProvider)
+	msp := NewMysqlStorageProvider(storageParameter)
+	err = RegisterProvider(interface{}(msp).(base.Provider))
+	if err != nil {
+		errorMsg := fmt.Sprintf("MySQL Storage provider register error: %s", err)
+		return nil, nil, errors.New(errorMsg)
+	}
+	return rcp, msp, nil
 }

@@ -28,7 +28,7 @@ type redisCacheProvider struct {
 	ProviderName string
 }
 
-func NewCacheProvider(parameter CacheParameter) *redisCacheProvider {
+func NewRedisCacheProvider(parameter CacheParameter) *redisCacheProvider {
 	cacheInitContext.Do(func() {
 		err := initializeForCacheProvider(parameter)
 		if err != nil {

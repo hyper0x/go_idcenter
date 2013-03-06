@@ -36,7 +36,7 @@ var mysqlConnPool *pool.Pool
 var signMap map[string]*go_lib.Sign
 var iMysqlStorageProvider *mysqlStorageProvider
 
-func NewStorageProvider(parameter StorageParameter) *mysqlStorageProvider {
+func NewMysqlStorageProvider(parameter StorageParameter) *mysqlStorageProvider {
 	storageInitContext.Do(func() {
 		err := initializeForStorageProvider(parameter)
 		if err != nil {
