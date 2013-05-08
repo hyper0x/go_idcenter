@@ -48,7 +48,7 @@ func NewMysqlStorageProvider(parameter MysqlParameter) *mysqlStorageProvider {
 
 func initializeForStorageProvider(parameter MysqlParameter) error {
 	mysqlServerAddr := fmt.Sprintf("%v:%v", parameter.Ip, parameter.Port)
-	go_lib.LogInfof("Initialize mysql storage provider (parameter=%v)...", parameter)
+	Logger().Infof("Initialize mysql storage provider (parameter=%v)...", parameter)
 	mysqlConnPool = &pool.Pool{Id: "MySQL Connection Pool", Size: int(parameter.PoolSize)}
 	initFunc := func() (interface{}, error) {
 		conn := autorc.New("tcp", "", mysqlServerAddr, parameter.User, parameter.Password)
@@ -56,7 +56,7 @@ func initializeForStorageProvider(parameter MysqlParameter) error {
 		err := conn.Use(parameter.DbName)
 		if err != nil {
 			errorMsg := fmt.Sprintf("Occur error when mysql connection initialization (parameter=%v): %s\n", parameter, err)
-			go_lib.LogErrorln(errorMsg)
+			Logger().Errorln(errorMsg)
 			return nil, err
 		}
 		return conn, nil
@@ -64,7 +64,7 @@ func initializeForStorageProvider(parameter MysqlParameter) error {
 	err := mysqlConnPool.Init(initFunc)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Occur error when mysql connection pool initialization (parameter=%v): %s\n", parameter, err)
-		go_lib.LogErrorln(errorMsg)
+		Logger().Errorln(errorMsg)
 		return errors.New(errorMsg)
 	}
 	signMap = make(map[string]*go_lib.Sign)
@@ -108,7 +108,7 @@ func (self mysqlStorageProvider) Name() string {
 func (self mysqlStorageProvider) BuildInfo(group string, start uint64, step uint32) (bool, error) {
 	if len(group) == 0 {
 		errorMsg := fmt.Sprint("The group name is INVALID!")
-		go_lib.LogErrorln(errorMsg)
+		Logger().Errorln(errorMsg)
 		return false, errors.New(errorMsg)
 	}
 	errorMsgPrefix := fmt.Sprintf("Occur error when build group info (group=%v, start=%v, step=%v)", group, start, step)
@@ -116,18 +116,18 @@ func (self mysqlStorageProvider) BuildInfo(group string, start uint64, step uint
 	defer releaseMysqlConnection(conn)
 	if err != nil {
 		errorMsg := fmt.Sprintf("%s: %s", errorMsgPrefix, err)
-		go_lib.LogErrorln(errorMsg)
+		Logger().Errorln(errorMsg)
 		return false, errors.New(errorMsg)
 	}
 	groupInfo, err := self.get(conn, group)
 	if err != nil {
 		errorMsg := fmt.Sprintf("%s: %s", errorMsgPrefix, err)
-		go_lib.LogErrorln(errorMsg)
+		Logger().Errorln(errorMsg)
 		return false, errors.New(errorMsg)
 	}
 	if groupInfo != nil {
 		warnMsg := fmt.Sprintf("The group '%s' already exists. IGNORE group info building.", group)
-		go_lib.LogWarnln(warnMsg)
+		Logger().Warnln(warnMsg)
 		return false, nil
 	}
 	creation_dt := formatTime(time.Now())
@@ -136,7 +136,7 @@ func (self mysqlStorageProvider) BuildInfo(group string, start uint64, step uint
 	_, _, err = conn.QueryFirst(sql)
 	if err != nil {
 		errorMsg := fmt.Sprintf("%s (sql=%s): %s", errorMsgPrefix, sql, err)
-		go_lib.LogErrorln(errorMsg)
+		Logger().Errorln(errorMsg)
 		return false, errors.New(errorMsg)
 	}
 	return true, nil
@@ -145,7 +145,7 @@ func (self mysqlStorageProvider) BuildInfo(group string, start uint64, step uint
 func (self mysqlStorageProvider) Get(group string) (*GroupInfo, error) {
 	if len(group) == 0 {
 		errorMsg := fmt.Sprint("The group name is INVALID!")
-		go_lib.LogErrorln(errorMsg)
+		Logger().Errorln(errorMsg)
 		return nil, errors.New(errorMsg)
 	}
 	errorMsgPrefix := fmt.Sprintf("Occur error when get group info (group=%v)", group)
@@ -153,7 +153,7 @@ func (self mysqlStorageProvider) Get(group string) (*GroupInfo, error) {
 	defer releaseMysqlConnection(conn)
 	if err != nil {
 		errorMsg := fmt.Sprintf("%s: %s", errorMsgPrefix, err)
-		go_lib.LogErrorln(errorMsg)
+		Logger().Errorln(errorMsg)
 		return nil, errors.New(errorMsg)
 	}
 	return self.get(conn, group)
@@ -166,7 +166,7 @@ func (self mysqlStorageProvider) get(conn *autorc.Conn, group string) (*GroupInf
 	row, _, err := conn.QueryFirst(sql)
 	if err != nil {
 		errorMsg := fmt.Sprintf("%s (sql=%s): %s", errorMsgPrefix, sql, err)
-		go_lib.LogErrorln(errorMsg)
+		Logger().Errorln(errorMsg)
 		return nil, errors.New(errorMsg)
 	}
 	if row == nil {
@@ -186,7 +186,7 @@ func (self mysqlStorageProvider) get(conn *autorc.Conn, group string) (*GroupInf
 func (self mysqlStorageProvider) Propel(group string) (*IdRange, error) {
 	if len(group) == 0 {
 		errorMsg := fmt.Sprint("The group name is INVALID!")
-		go_lib.LogErrorln(errorMsg)
+		Logger().Errorln(errorMsg)
 		return nil, errors.New(errorMsg)
 	}
 	sign := getSign(group)
@@ -194,7 +194,7 @@ func (self mysqlStorageProvider) Propel(group string) (*IdRange, error) {
 	defer sign.Unset()
 	if len(group) == 0 {
 		errorMsg := fmt.Sprint("The group name is INVALID!")
-		go_lib.LogErrorln(errorMsg)
+		Logger().Errorln(errorMsg)
 		return nil, errors.New(errorMsg)
 	}
 	errorMsgPrefix := fmt.Sprintf("Occur error when propel (group=%v)", group)
@@ -202,18 +202,18 @@ func (self mysqlStorageProvider) Propel(group string) (*IdRange, error) {
 	defer releaseMysqlConnection(conn)
 	if err != nil {
 		errorMsg := fmt.Sprintf("%s: %s", errorMsgPrefix, err)
-		go_lib.LogErrorln(errorMsg)
+		Logger().Errorln(errorMsg)
 		return nil, errors.New(errorMsg)
 	}
 	groupInfo, err := self.get(conn, group)
 	if err != nil {
 		errorMsg := fmt.Sprintf("%s: %s", errorMsgPrefix, err)
-		go_lib.LogErrorln(errorMsg)
+		Logger().Errorln(errorMsg)
 		return nil, errors.New(errorMsg)
 	}
 	if groupInfo == nil {
 		warnMsg := fmt.Sprintf("The group '%s' not exist. IGNORE propeling.", group)
-		go_lib.LogWarnln(warnMsg)
+		Logger().Warnln(warnMsg)
 		return nil, nil
 	}
 	idRange := groupInfo.Range
@@ -231,7 +231,7 @@ func (self mysqlStorageProvider) Propel(group string) (*IdRange, error) {
 	_, _, err = conn.QueryFirst(sql)
 	if err != nil {
 		errorMsg := fmt.Sprintf("%s (sql=%s): %s", errorMsgPrefix, sql, err)
-		go_lib.LogErrorln(errorMsg)
+		Logger().Errorln(errorMsg)
 		return nil, errors.New(errorMsg)
 	}
 	newIdRange := IdRange{Begin: newBegin, End: newEnd}
@@ -241,7 +241,7 @@ func (self mysqlStorageProvider) Propel(group string) (*IdRange, error) {
 func (self mysqlStorageProvider) Clear(group string) (bool, error) {
 	if len(group) == 0 {
 		errorMsg := fmt.Sprint("The group name is INVALID!")
-		go_lib.LogErrorln(errorMsg)
+		Logger().Errorln(errorMsg)
 		return false, errors.New(errorMsg)
 	}
 	errorMsgPrefix := fmt.Sprintf("Occur error when clear group info (group=%v)", group)
@@ -249,7 +249,7 @@ func (self mysqlStorageProvider) Clear(group string) (bool, error) {
 	defer releaseMysqlConnection(conn)
 	if err != nil {
 		errorMsg := fmt.Sprintf("%s: %s", errorMsgPrefix, err)
-		go_lib.LogErrorln(errorMsg)
+		Logger().Errorln(errorMsg)
 		return false, errors.New(errorMsg)
 	}
 	rawSql := "delete from `%s` where `name`='%s'"
@@ -257,14 +257,14 @@ func (self mysqlStorageProvider) Clear(group string) (bool, error) {
 	_, result, err := conn.QueryFirst(sql)
 	if err != nil {
 		errorMsg := fmt.Sprintf("%s (sql=%s): %s", errorMsgPrefix, sql, err)
-		go_lib.LogErrorln(errorMsg)
+		Logger().Errorln(errorMsg)
 		return false, errors.New(errorMsg)
 	}
 	var affectedRows uint64 = 0
 	if result != nil {
 		affectedRows = result.AffectedRows()
 	}
-	go_lib.LogInfof("MySQL Storage Provider: The group '%s' is cleared. (affectedRows=%v)", group, (affectedRows > 0))
+	Logger().Infof("MySQL Storage Provider: The group '%s' is cleared. (affectedRows=%v)", group, (affectedRows > 0))
 	return true, nil
 }
 

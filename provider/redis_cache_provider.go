@@ -40,7 +40,7 @@ func NewRedisCacheProvider(parameter RedisParameter) *redisCacheProvider {
 
 func initializeForCacheProvider(parameter RedisParameter) error {
 	redisServerAddr := fmt.Sprintf("%v:%v", parameter.Ip, parameter.Port)
-	go_lib.LogInfof("Initialize redis cache provider (parameter=%v)...", parameter)
+	base.Logger().Infof("Initialize redis cache provider (parameter=%v)...", parameter)
 	redisPool = &redis.Pool{
 		MaxIdle:     int(parameter.PoolSize),
 		IdleTimeout: 240 * time.Second,
@@ -70,7 +70,7 @@ func (self redisCacheProvider) Name() string {
 func (self redisCacheProvider) BuildList(group string, begin uint64, end uint64) (bool, error) {
 	if len(group) == 0 {
 		errorMsg := fmt.Sprint("The group name is INVALID!")
-		go_lib.LogErrorln(errorMsg)
+		base.Logger().Errorln(errorMsg)
 		return false, errors.New(errorMsg)
 	}
 	rwSign := getRWSign(group)
@@ -78,7 +78,7 @@ func (self redisCacheProvider) BuildList(group string, begin uint64, end uint64)
 	defer rwSign.Unset()
 	if (begin <= 0) || (end <= 0) || (begin >= end) {
 		errorMsg := fmt.Sprintf("Invalid Parameter(s)! (begin=%d, end=%d)\n", begin, end)
-		go_lib.LogError(errorMsg)
+		base.Logger().Error(errorMsg)
 		return false, errors.New(errorMsg)
 	}
 	conn := redisPool.Get()
@@ -86,30 +86,30 @@ func (self redisCacheProvider) BuildList(group string, begin uint64, end uint64)
 	exists, err := redis.Bool(conn.Do("EXISTS", group))
 	if err != nil {
 		errorMsg := fmt.Sprintf("Redis Error <EXISTS %s>: %s\n ", group, err.Error())
-		go_lib.LogErrorf(errorMsg)
+		base.Logger().Errorf(errorMsg)
 		return false, errors.New(errorMsg)
 	}
 	if exists {
 		effectedKeys, err := redis.Int(conn.Do("DEL", group))
 		if err != nil {
 			errorMsg := fmt.Sprintf("Redis Error <DEL %s>: %s\n ", group, err.Error())
-			go_lib.LogError(errorMsg)
+			base.Logger().Error(errorMsg)
 			return false, errors.New(errorMsg)
 		}
 		if effectedKeys < 1 {
 			warningMsg := fmt.Sprintf("Redis warning <DEL %s>: seemingly failed.\n ", group)
-			go_lib.LogWarn(warningMsg)
+			base.Logger().Warn(warningMsg)
 		}
 	}
 	for i := begin; i < end; i++ {
 		length, err := redis.Int(conn.Do("LPUSH", group, i))
 		if err != nil {
 			errorMsg := fmt.Sprintf("Redis Error <LPUSH %s %d> (total_length=%d): %s\n ", group, i, length, err.Error())
-			go_lib.LogError(errorMsg)
+			base.Logger().Error(errorMsg)
 			return false, errors.New(errorMsg)
 		}
 	}
-	go_lib.LogInfof("The list of group '%s' is builded. (begin=%d, end=%d)\n", group, begin, end)
+	base.Logger().Infof("The list of group '%s' is builded. (begin=%d, end=%d)\n", group, begin, end)
 	return true, nil
 
 }
@@ -117,7 +117,7 @@ func (self redisCacheProvider) BuildList(group string, begin uint64, end uint64)
 func (self redisCacheProvider) Pop(group string) (uint64, error) {
 	if len(group) == 0 {
 		errorMsg := fmt.Sprint("The group name is INVALID!")
-		go_lib.LogErrorln(errorMsg)
+		base.Logger().Errorln(errorMsg)
 		return 0, errors.New(errorMsg)
 	}
 	rwSign := getRWSign(group)
@@ -128,7 +128,7 @@ func (self redisCacheProvider) Pop(group string) (uint64, error) {
 	value, err := conn.Do("RPOP", group)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Redis Error <RPOP %s>: %s\n ", group, err.Error())
-		go_lib.LogError(errorMsg)
+		base.Logger().Error(errorMsg)
 		return 0, errors.New(errorMsg)
 	}
 	if value == nil {
@@ -139,7 +139,7 @@ func (self redisCacheProvider) Pop(group string) (uint64, error) {
 	number, err := strconv.ParseUint(string(baValue), 10, 64)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Converting Error (value=%s): %s\n ", value, err.Error())
-		go_lib.LogError(errorMsg)
+		base.Logger().Error(errorMsg)
 		return 0, errors.New(errorMsg)
 	}
 	return number, nil
@@ -148,7 +148,7 @@ func (self redisCacheProvider) Pop(group string) (uint64, error) {
 func (self redisCacheProvider) Clear(group string) (bool, error) {
 	if len(group) == 0 {
 		errorMsg := fmt.Sprint("The group name is INVALID!")
-		go_lib.LogErrorln(errorMsg)
+		base.Logger().Errorln(errorMsg)
 		return false, errors.New(errorMsg)
 	}
 	rwSign := getRWSign(group)
@@ -159,10 +159,10 @@ func (self redisCacheProvider) Clear(group string) (bool, error) {
 	effectedKeys, err := redis.Int(conn.Do("DEL", group))
 	if err != nil {
 		errorMsg := fmt.Sprintf("Redis Error <DEL %s>: %s\n ", group, err.Error())
-		go_lib.LogError(errorMsg)
+		base.Logger().Error(errorMsg)
 		return false, errors.New(errorMsg)
 	}
-	go_lib.LogInfof("Redis Cache Provider: The group '%s' is cleared. (affectedKeys=%v)", group, (effectedKeys > 0))
+	base.Logger().Infof("Redis Cache Provider: The group '%s' is cleared. (affectedKeys=%v)", group, (effectedKeys > 0))
 	return true, nil
 }
 
