@@ -24,7 +24,7 @@ go get github.com/ziutek/mymysql/godrv
 
 # go_lib
 cd <$GOPATH1/src> # $GOPATH1 is the first part of $GOPATH.
-git clone https://github.com/hyper-carrot/go_idcenter.git
+git clone https://github.com/hyper-carrot/go_lib.git
 ```
 
 4. Edit id_center.config for your need.
